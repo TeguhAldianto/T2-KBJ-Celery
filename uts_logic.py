@@ -11,6 +11,9 @@ def execute_application(application_id: str, payload: Dict[str, Any], worker_id:
     """
     Logika aplikasi UTS (SHORT/LONG) yang sama persis, dijalankan sebagai tugas Celery.
     """
+    if payload.get("force_worker_error") is True:
+        raise RuntimeError("Simulasi kegagalan internal pada worker (force_worker_error=True).")
+
     if application_id == "SHORT":
         msg = payload.get("message", "")
         return msg

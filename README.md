@@ -1,8 +1,8 @@
 # T2-KBJ-Celery
 
 Implementasi Tugas 2 KBJ (Job Queue dengan Celery & RabbitMQ), sekaligus **porting logika UTS** (`socket-load-balancer`) ke Celery agar selinier:
-- Aplikasi UTS **SHORT** (echo pesan) dan **LONG** (komputasi numerik deterministik + delay terukur) diimplementasikan sebagai task Celery di `tasks.py` (logika inti di `uts_logic.py`, sama persis dengan UTS).
-- `producer.py` berperan sebagai pengganti client/producer UTS: mengirim pekerjaan ke broker RabbitMQ untuk diproses worker Celery.
+- Aplikasi UTS **SHORT** (echo pesan) dan **LONG** (komputasi numerik deterministik + delay terukur) diimplementasikan sebagai task Celery di `tasks.py` (logika inti di `uts_logic.py`, sama persis dengan UTS: `execute_application`, default/limit iterasi, `simulated_delay_ms`, `force_worker_error`).
+- `producer.py` berperan sebagai pengganti client/producer UTS: **input generator** yang mengirim pekerjaan ke broker RabbitMQ untuk diproses worker Celery (mode `default|fanout|topic`, `--count` untuk batch, `--force-error`).
 - Alokasi beban (round-robin/least-served) pada UTS kini ditangani oleh mekanisme distribusi Celery/RabbitMQ ke worker/queue.
 
 ## Prasyarat
@@ -30,13 +30,19 @@ pip install -r requirements.txt
 celery -A celery_app worker --loglevel=info -P solo -Q default
 ```
 
-### 2. Producer - porting UTS (SHORT/LONG)
+### 2. Producer - porting UTS (SHORT/LONG, input generator)
 ```bash
 # SHORT (echo)
 python producer.py --mode default --app SHORT --req-id REQ-001 --message "Halo UTS"
 
 # LONG (komputasi numerik)
 python producer.py --mode default --app LONG --req-id REQ-002 --message "Komputasi" --iterations 400000 --delay-ms 40
+
+# Batch/generate N request
+python producer.py --mode default --app SHORT --req-id REQ --message "Halo" --count 5
+
+# Simulasi error worker (paritas UTS force_worker_error)
+python producer.py --mode default --app SHORT --req-id REQ-ERR --message "tes" --force-error
 ```
 
 ### 3. Flower (opsional)

@@ -1,19 +1,22 @@
 import argparse
 import json
+from typing import Any
 
 from celery_app import fanout_exchange, topic_exchange
 from tasks import fanout_task, long_task, short_task, topic_task
 from uts_logic import DEFAULT_LONG_ITERATIONS
 
 
-def send_default(app_id: str, request_id: str, message: str, iterations: int, delay_ms: float, wait: bool):
+def send_default(app_id: str, request_id: str, message: str, iterations: int, delay_ms: float, wait: bool, force_error: bool = False):
+    payload: dict[str, Any] = {"message": message}
+    if force_error:
+        payload["force_worker_error"] = True
     if app_id == "SHORT":
-        async_result = short_task.delay(request_id, {"message": message})  # type: ignore[attr-defined]
+        async_result = short_task.delay(request_id, payload)  # type: ignore[attr-defined]
     elif app_id == "LONG":
-        async_result = long_task.delay(  # type: ignore[attr-defined]
-            request_id,
-            {"message": message, "iterations": iterations, "simulated_delay_ms": delay_ms},
-        )
+        payload["iterations"] = iterations
+        payload["simulated_delay_ms"] = delay_ms
+        async_result = long_task.delay(request_id, payload)  # type: ignore[attr-defined]
     else:
         raise ValueError("app harus SHORT atau LONG")
     print(f"[PRODUCER:default] task_id={async_result.id} app={app_id} request_id={request_id}")
@@ -52,14 +55,23 @@ def main():
     parser.add_argument("--delay-ms", type=float, default=40.0)
     parser.add_argument("--routing-key", default="app.short", help="untuk mode topic, mis: app.short, app.long, other.short")
     parser.add_argument("--no-wait", action="store_true", help="jangan tunggu hasil (berguna untuk fanout/topic)")
+    parser.add_argument("--force-error", action="store_true", help="simulasi kegagalan pemrosesan worker (paritas UTS)")
+    parser.add_argument("--count", type=int, default=1, help="jumlah request dikirim (input generator/batch)")
     args = parser.parse_args()
 
     if args.mode == "default":
-        send_default(args.app, args.req_id, args.message, args.iterations, args.delay_ms, wait=not args.no_wait)
+        for i in range(1, args.count + 1):
+            req_id = args.req_id if args.count == 1 else f"{args.req_id}-{i:03d}"
+            send_default(args.app, req_id, f"{args.message} #{i}" if args.count > 1 else args.message,
+                         args.iterations, args.delay_ms, wait=not args.no_wait, force_error=args.force_error)
     elif args.mode == "fanout":
-        send_fanout(args.message)
+        for i in range(1, args.count + 1):
+            msg = f"{args.message} #{i}" if args.count > 1 else args.message
+            send_fanout(msg)
     elif args.mode == "topic":
-        send_topic(args.routing_key, args.message)
+        for i in range(1, args.count + 1):
+            msg = f"{args.message} #{i}" if args.count > 1 else args.message
+            send_topic(args.routing_key, msg)
 
 
 if __name__ == "__main__":

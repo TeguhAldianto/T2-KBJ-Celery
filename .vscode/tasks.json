@@ -1,0 +1,62 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Worker: default",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\celery.exe -A celery_app worker --loglevel=info -P solo -Q default",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "workers" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Worker: fanout.q1",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\celery.exe -A celery_app worker --loglevel=info -P solo -Q fanout.q1 -n fan1@%h",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "workers" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Worker: fanout.q2",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\celery.exe -A celery_app worker --loglevel=info -P solo -Q fanout.q2 -n fan2@%h",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "workers" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Worker: topic",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\celery.exe -A celery_app worker --loglevel=info -P solo -Q topic.short,topic.long,topic.all,topic.one -n topic@%h",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "workers" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Flower",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\celery.exe -A celery_app flower",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "workers" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run All (workers + flower)",
+      "dependsOn": [
+        "Worker: default",
+        "Worker: fanout.q1",
+        "Worker: fanout.q2",
+        "Worker: topic",
+        "Flower"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    }
+  ]
+}
